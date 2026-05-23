@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useKeyboardControls } from '@react-three/drei';
-import { RigidBody } from '@react-three/rapier';
+import { RigidBody, CapsuleCollider } from '@react-three/rapier';
 import * as THREE from 'three';
 import { useGameStore } from '../store/useGameStore';
 
@@ -124,10 +124,11 @@ export const Player3D = () => {
   return (
     <RigidBody
       ref={rb}
-      colliders="capsule"
+      colliders={false}
       enabledRotations={[false, false, false]}
       position={[0, 0.4, 0]}
     >
+      <CapsuleCollider args={[0.3, 0.32]} position={[0, 0.32, 0]} />
       {/* Set name="player" so CameraController can locate it */}
       <group ref={group} name="player">
         

@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useKeyboardControls } from '@react-three/drei';
-import { RigidBody } from '@react-three/rapier';
+import { RigidBody, CuboidCollider } from '@react-three/rapier';
 import * as THREE from 'three';
 import { useGameStore } from '../store/useGameStore';
 
@@ -82,13 +82,14 @@ export const Player2D = () => {
   return (
     <RigidBody
       ref={rb}
-      colliders="cuboid"
+      colliders={false}
       enabledRotations={[false, false, false]}
       position={[0, 0.4, 0]}
     >
+      <CuboidCollider args={[0.38, 0.38, 0.2]} position={[0, 0.38, 0]} />
       <group ref={group} name="player">
         
-        {/* Procedural 2D Retro Cyber-Block */}
+        {/* Procedural 2D Cyber-Block */}
         <mesh castShadow>
           <boxGeometry args={[0.5, 0.5, 0.2]} />
           <meshStandardMaterial color="#1a1a24" roughness={0.4} metalness={0.8} />

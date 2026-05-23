@@ -1,6 +1,6 @@
 import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { RigidBody } from '@react-three/rapier';
+import { RigidBody, CuboidCollider } from '@react-three/rapier';
 import { useGameStore } from '../store/useGameStore';
 
 // Individual Obstacle Component
@@ -8,7 +8,6 @@ const ObstacleItem = ({ position }) => {
   const loseLife = useGameStore((state) => state.loseLife);
   const glowRef = useRef();
 
-  // Pulse animation for neon warning glow
   useFrame((state) => {
     if (!glowRef.current) return;
     const pulse = 0.5 + Math.sin(state.clock.getElapsedTime() * 8) * 0.4;
@@ -16,7 +15,6 @@ const ObstacleItem = ({ position }) => {
   });
 
   const handleCollision = (e) => {
-    // Trigger life loss when player crashes
     loseLife();
   };
 
@@ -24,9 +22,10 @@ const ObstacleItem = ({ position }) => {
     <RigidBody
       type="fixed"
       position={position}
-      colliders="cuboid"
+      colliders={false}
       onCollisionEnter={handleCollision}
     >
+      <CuboidCollider args={[0.9, 0.45, 0.12]} position={[0, 0.45, 0]} />
       <group>
         {/* Left Stand */}
         <mesh position={[-0.9, 0.4, 0]} castShadow>
@@ -66,18 +65,15 @@ export const Obstacle = () => {
 
   const obstacles = useMemo(() => {
     const list = [];
-    const lanes = [-2.2, 0, 2.2]; // Lane alignments
+    const lanes = [-2.2, 0, 2.2];
     
-    // Seeded random helper to make the track layout stable
     let seed = 98765;
     const seededRandom = () => {
       const x = Math.sin(seed++) * 10000;
       return x - Math.floor(x);
     };
 
-    // Spawn obstacles from Z = -45 to Z = -680, every 45-55 units
     for (let z = -45; z > -680; z -= 45 + Math.floor(seededRandom() * 15)) {
-      // Pick a random lane
       const laneIndex = Math.floor(seededRandom() * lanes.length);
       const lane = lanes[laneIndex];
 
@@ -87,7 +83,7 @@ export const Obstacle = () => {
       });
     }
     return list;
-  }, [gameState === 'START']); // Regenerate layout when starting/resetting
+  }, [gameState === 'START']);
 
   return (
     <group>
