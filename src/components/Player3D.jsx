@@ -8,11 +8,14 @@ import { useGameStore } from '../store/useGameStore';
 export const Player3D = () => {
   const rb = useRef();
   const group = useRef();
-  const thrusterRef = useRef();
-  const leftRotor = useRef();
-  const rightRotor = useRef();
 
-  const { gameState, weight, updateDistance } = useGameStore();
+  // Limb refs for procedural running human animation
+  const leftArmRef = useRef();
+  const rightArmRef = useRef();
+  const leftLegRef = useRef();
+  const rightLegRef = useRef();
+
+  const { gameState, weight, distance, updateDistance } = useGameStore();
   const [, getKeys] = useKeyboardControls();
   
   // Lane positions and state
@@ -34,10 +37,10 @@ export const Player3D = () => {
     }
   }, []);
 
-  // Reset physics position and lane state when the game starts or resets
+  // Teleport the player back to start when the game returns to START or reset
   useEffect(() => {
-    if (gameState === 'PLAYING' && rb.current) {
-      rb.current.setTranslation({ x: 0, y: 0.4, z: 0 }, true);
+    if ((gameState === 'START' || gameState === 'PLAYING') && rb.current) {
+      rb.current.setTranslation({ x: 0, y: 0.64, z: 0 }, true);
       rb.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
       setActiveLane(1);
     }
@@ -50,36 +53,46 @@ export const Player3D = () => {
     const position = rb.current.translation();
     const velocity = rb.current.linvel();
 
-    // 1. DYNAMIC VISUAL SCALING (FATNESS)
+    // 1. SYNCHRONOUS TELEPORT reset guard (instantly catches Z = -720 race conditions before any ticks compute)
+    if (gameState === 'PLAYING' && Math.abs(position.z) > 100 && distance === 0) {
+      rb.current.setTranslation({ x: 0, y: 0.64, z: 0 }, true);
+      rb.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      setActiveLane(1);
+      return;
+    }
+
+    // 2. DYNAMIC VISUAL SCALING (FATNESS)
     // Scale X/Z based on current weight (base 50 is scale 1.0, range 20-100)
     const scaleFactor = 1.0 + (weight - 50) / 100;
     // Keep Y height constant, grow width & depth to look fat/slim
     group.current.scale.set(scaleFactor, 1.0, scaleFactor);
 
-    // 2. PROCEDURAL ANIMATIONS (bobbing, rotors, thrusters)
+    // 3. PROCEDURAL HUMAN ANIMATIONS (bobbing, limb swinging)
     const time = state.clock.getElapsedTime();
     
-    // Smooth idle bobbing
     if (gameState === 'PLAYING') {
-      group.current.position.y = Math.sin(time * 6) * 0.08;
-    } else {
-      group.current.position.y = Math.sin(time * 3) * 0.12;
-    }
-
-    // Spin side rotors in opposite directions
-    if (leftRotor.current) leftRotor.current.rotation.y += 0.15;
-    if (rightRotor.current) rightRotor.current.rotation.y -= 0.15;
-
-    // Pulse bottom thruster flame
-    if (thrusterRef.current) {
-      const pulse = 0.8 + Math.sin(time * 20) * 0.25;
-      thrusterRef.current.scale.set(pulse, pulse * 1.5, pulse);
-    }
-
-    // If game is not actively playing, stall and freeze player
-    if (gameState !== 'PLAYING') {
-      rb.current.setLinvel({ x: 0, y: Math.sin(time * 2) * 0.2, z: 0 }, true);
+      // Gentle running bounce/bobbing
+      group.current.position.y = Math.sin(time * 6) * 0.05;
       
+      // Swing limbs like a running human runner
+      if (leftLegRef.current) leftLegRef.current.rotation.x = Math.sin(time * 12) * 0.7;
+      if (rightLegRef.current) rightLegRef.current.rotation.x = -Math.sin(time * 12) * 0.7;
+      
+      if (leftArmRef.current) leftArmRef.current.rotation.x = -Math.sin(time * 12) * 0.6;
+      if (rightArmRef.current) rightArmRef.current.rotation.x = Math.sin(time * 12) * 0.6;
+    } else {
+      // Gentle idle breathing bob
+      group.current.position.y = Math.sin(time * 2.5) * 0.03;
+      
+      // Return limbs to neutral position smoothly when not playing
+      if (leftLegRef.current) leftLegRef.current.rotation.x = THREE.MathUtils.lerp(leftLegRef.current.rotation.x, 0, 0.1);
+      if (rightLegRef.current) rightLegRef.current.rotation.x = THREE.MathUtils.lerp(rightLegRef.current.rotation.x, 0, 0.1);
+      if (leftArmRef.current) leftArmRef.current.rotation.x = THREE.MathUtils.lerp(leftArmRef.current.rotation.x, 0, 0.1);
+      if (rightArmRef.current) rightArmRef.current.rotation.x = THREE.MathUtils.lerp(rightArmRef.current.rotation.x, 0, 0.1);
+
+      // Free stall if game over or won
+      rb.current.setLinvel({ x: 0, y: Math.sin(time * 2) * 0.1, z: 0 }, true);
+
       // Dramatic crash rotation if lost
       if (gameState === 'GAMEOVER') {
         group.current.rotation.z = THREE.MathUtils.lerp(group.current.rotation.z, Math.PI / 3, 0.05);
@@ -90,7 +103,7 @@ export const Player3D = () => {
       return;
     }
 
-    // 3. KEYBOARD MOVEMENT CONTROL
+    // 4. KEYBOARD MOVEMENT CONTROL
     const { left, right, jump } = getKeys();
 
     // Switch lanes discretely
@@ -108,15 +121,15 @@ export const Player3D = () => {
     const targetX = lanes[activeLane];
     const newX = THREE.MathUtils.lerp(position.x, targetX, laneTransitionSpeed);
 
-    // Apply minor banking tilt when switching lanes
-    const tiltTarget = (targetX - position.x) * -0.15;
+    // Apply banking tilt when switching lanes
+    const tiltTarget = (targetX - position.x) * -0.12;
     group.current.rotation.z = THREE.MathUtils.lerp(group.current.rotation.z, tiltTarget, 0.12);
 
-    // 4. JUMP MECHANIC
+    // 5. JUMP MECHANIC
     let jumpYVel = velocity.y;
-    // Check if player is resting on or close to the ground (resting Y is around 0.32)
+    // Check if player is resting on or close to the ground (resting Y is around 0.64)
     // and vertical velocity is near zero to prevent double jumping
-    const isOnGround = position.y < 0.45 && Math.abs(velocity.y) < 0.15;
+    const isOnGround = position.y < 0.75 && Math.abs(velocity.y) < 0.15;
     if (jump && isOnGround) {
       jumpYVel = 6.2; // Apply upward jump velocity
     }
@@ -136,21 +149,22 @@ export const Player3D = () => {
       ref={rb}
       colliders={false}
       enabledRotations={[false, false, false]}
-      position={[0, 0.4, 0]}
+      position={[0, 0.64, 0]}
     >
-      <CapsuleCollider args={[0.3, 0.32]} position={[0, 0.32, 0]} />
+      <CapsuleCollider args={[0.42, 0.22]} position={[0, 0.22, 0]} />
+      
       {/* Set name="player" so CameraController can locate it */}
       <group ref={group} name="player">
         
-        {/* Main Drone Body (High-tech Capsule) */}
-        <mesh castShadow>
-          <capsuleGeometry args={[0.3, 0.35, 8, 16]} />
-          <meshStandardMaterial color="#1a1a24" roughness={0.3} metalness={0.8} />
+        {/* Head */}
+        <mesh position={[0, 0.65, 0]} castShadow>
+          <sphereGeometry args={[0.18, 16, 16]} />
+          <meshStandardMaterial color="#ffdbac" roughness={0.4} />
         </mesh>
-
+        
         {/* Cyber Visor Eye (Glowing cyan/rose neon) */}
-        <mesh position={[0, 0.12, -0.22]}>
-          <boxGeometry args={[0.42, 0.1, 0.15]} />
+        <mesh position={[0, 0.68, -0.12]}>
+          <boxGeometry args={[0.3, 0.06, 0.1]} />
           <meshStandardMaterial
             color={glowColor}
             emissive={glowColor}
@@ -159,44 +173,50 @@ export const Player3D = () => {
           />
         </mesh>
 
-        {/* Left Rotor Engine Bracket */}
-        <mesh position={[-0.45, 0, 0]} rotation={[0, 0, Math.PI / 12]}>
-          <boxGeometry args={[0.2, 0.05, 0.05]} />
-          <meshStandardMaterial color="#111116" />
+        {/* Torso (Body) */}
+        <mesh position={[0, 0.22, 0]} castShadow>
+          <boxGeometry args={[0.38, 0.54, 0.22]} />
+          <meshStandardMaterial color="#161622" roughness={0.3} metalness={0.8} />
+        </mesh>
+        
+        {/* Glowing Suit Strip */}
+        <mesh position={[0, 0.22, -0.12]}>
+          <boxGeometry args={[0.06, 0.4, 0.02]} />
+          <meshBasicMaterial color={glowColor} />
         </mesh>
 
-        {/* Left Rotor Ring */}
-        <mesh ref={leftRotor} position={[-0.55, 0, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[0.16, 0.03, 8, 16]} />
-          <meshStandardMaterial color="#2d2d38" roughness={0.1} />
-        </mesh>
+        {/* Left Arm */}
+        <group ref={leftArmRef} position={[-0.24, 0.38, 0]}>
+          <mesh position={[0, -0.18, 0]} castShadow>
+            <boxGeometry args={[0.08, 0.36, 0.08]} />
+            <meshStandardMaterial color="#161622" roughness={0.3} metalness={0.8} />
+          </mesh>
+        </group>
 
-        {/* Right Rotor Engine Bracket */}
-        <mesh position={[0.45, 0, 0]} rotation={[0, 0, -Math.PI / 12]}>
-          <boxGeometry args={[0.2, 0.05, 0.05]} />
-          <meshStandardMaterial color="#111116" />
-        </mesh>
+        {/* Right Arm */}
+        <group ref={rightArmRef} position={[0.24, 0.38, 0]}>
+          <mesh position={[0, -0.18, 0]} castShadow>
+            <boxGeometry args={[0.08, 0.36, 0.08]} />
+            <meshStandardMaterial color="#161622" roughness={0.3} metalness={0.8} />
+          </mesh>
+        </group>
 
-        {/* Right Rotor Ring */}
-        <mesh ref={rightRotor} position={[0.55, 0, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[0.16, 0.03, 8, 16]} />
-          <meshStandardMaterial color="#2d2d38" roughness={0.1} />
-        </mesh>
+        {/* Left Leg */}
+        <group ref={leftLegRef} position={[-0.12, -0.05, 0]}>
+          <mesh position={[0, -0.22, 0]} castShadow>
+            <boxGeometry args={[0.1, 0.44, 0.1]} />
+            <meshStandardMaterial color="#0b0b10" roughness={0.5} />
+          </mesh>
+        </group>
 
-        {/* Bottom Jet Jetpack Thruster */}
-        <mesh position={[0, -0.32, 0]}>
-          <cylinderGeometry args={[0.12, 0.08, 0.15, 12]} />
-          <meshStandardMaterial color="#111" roughness={0.6} />
-        </mesh>
-
-        {/* Pulsing Jet Thruster Flame */}
-        <mesh ref={thrusterRef} position={[0, -0.48, 0]} rotation={[0, 0, 0]}>
-          <coneGeometry args={[0.08, 0.22, 8]} />
-          <meshBasicMaterial color="#ff00a0" transparent opacity={0.8} />
-        </mesh>
-
-        {/* Jet Thruster Glow light */}
-        <pointLight position={[0, -0.6, 0]} color="#ff00a0" intensity={0.6} distance={6} />
+        {/* Right Leg */}
+        <group ref={rightLegRef} position={[0.12, -0.05, 0]}>
+          <mesh position={[0, -0.22, 0]} castShadow>
+            <boxGeometry args={[0.1, 0.44, 0.1]} />
+            <meshStandardMaterial color="#0b0b10" roughness={0.5} />
+          </mesh>
+        </group>
+        
       </group>
     </RigidBody>
   );

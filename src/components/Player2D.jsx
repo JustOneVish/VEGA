@@ -10,7 +10,7 @@ export const Player2D = () => {
   const group = useRef();
   const eyeRef = useRef();
 
-  const { gameState, weight } = useGameStore();
+  const { gameState, weight, distance } = useGameStore();
   const [, getKeys] = useKeyboardControls();
 
   // Setup tag name on mount so the CameraController can follow
@@ -22,7 +22,7 @@ export const Player2D = () => {
 
   // Reset physics position when the game starts or resets
   useEffect(() => {
-    if (gameState === 'PLAYING' && rb.current) {
+    if ((gameState === 'START' || gameState === 'PLAYING') && rb.current) {
       rb.current.setTranslation({ x: 0, y: 0.4, z: 0 }, true);
       rb.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
     }
@@ -33,6 +33,13 @@ export const Player2D = () => {
 
     const velocity = rb.current.linvel();
     const position = rb.current.translation();
+
+    // Synchronous teleport reset guard (prevents race conditions)
+    if (gameState === 'PLAYING' && Math.abs(position.x) > 100 && distance === 0) {
+      rb.current.setTranslation({ x: 0, y: 0.4, z: 0 }, true);
+      rb.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      return;
+    }
 
     // 1. DYNAMIC WEIGHT SCALING (Fatness)
     // In 2D, scale X and Y to look bigger/smaller flatly
@@ -97,15 +104,21 @@ export const Player2D = () => {
       <CuboidCollider args={[0.38, 0.38, 0.2]} position={[0, 0.38, 0]} />
       <group ref={group} name="player">
         
-        {/* Procedural 2D Cyber-Block */}
+        {/* Procedural 2D Flat Retro Human Torso */}
         <mesh castShadow>
-          <boxGeometry args={[0.5, 0.5, 0.2]} />
+          <boxGeometry args={[0.38, 0.46, 0.15]} />
           <meshStandardMaterial color="#1a1a24" roughness={0.4} metalness={0.8} />
         </mesh>
 
+        {/* 2D Flat Human Head */}
+        <mesh position={[0, 0.38, 0]} castShadow>
+          <sphereGeometry args={[0.13, 16, 16]} />
+          <meshStandardMaterial color="#ffdbac" roughness={0.4} />
+        </mesh>
+
         {/* Visor Eye */}
-        <mesh ref={eyeRef} position={[0, 0.1, 0.11]}>
-          <boxGeometry args={[0.3, 0.08, 0.05]} />
+        <mesh ref={eyeRef} position={[0, 0.4, 0.1]}>
+          <boxGeometry args={[0.22, 0.04, 0.05]} />
           <meshStandardMaterial
             color={glowColor}
             emissive={glowColor}
@@ -114,14 +127,14 @@ export const Player2D = () => {
           />
         </mesh>
 
-        {/* Side thrusters */}
-        <mesh position={[-0.28, -0.15, 0]}>
-          <boxGeometry args={[0.06, 0.16, 0.1]} />
-          <meshStandardMaterial color="#111" />
+        {/* Flat 2D Legs */}
+        <mesh position={[-0.1, -0.28, 0]}>
+          <boxGeometry args={[0.08, 0.22, 0.1]} />
+          <meshStandardMaterial color="#0f0f15" />
         </mesh>
-        <mesh position={[0.28, -0.15, 0]}>
-          <boxGeometry args={[0.06, 0.16, 0.1]} />
-          <meshStandardMaterial color="#111" />
+        <mesh position={[0.1, -0.28, 0]}>
+          <boxGeometry args={[0.08, 0.22, 0.1]} />
+          <meshStandardMaterial color="#0f0f15" />
         </mesh>
         
       </group>

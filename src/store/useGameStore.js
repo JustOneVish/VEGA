@@ -121,7 +121,7 @@ export const useGameStore = create((set) => ({
       distance: 0,
       lastCollectedFoodName: '',
       lastCollectedFoodWeight: 0,
-      gameState: 'PLAYING',
+      gameState: 'START',
       filteredFoods: filtered
     };
   }),

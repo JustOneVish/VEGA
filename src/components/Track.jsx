@@ -8,6 +8,16 @@ export const Track = () => {
   const startZ = 10;
   const endZ = -length;
 
+  // Generate segmented road platforms to prevent any Rapier collision bugs at distance
+  const segments = [];
+  const segmentLength = 100;
+  for (let i = 0; i < 8; i++) {
+    segments.push({
+      id: `floor-seg-${i}`,
+      position: [0, -0.25, -i * segmentLength - 50],
+    });
+  }
+
   // Generate repeating side pillars for a sense of speed
   const pillars = [];
   for (let z = 0; z > -720; z -= 30) {
@@ -24,14 +34,16 @@ export const Track = () => {
 
   return (
     <group>
-      {/* Physics Floor - Static, utilizing an explicit collider to prevent falling through floor */}
-      <RigidBody type="fixed" position={[0, -0.25, -360]} colliders={false}>
-        <CuboidCollider args={[5, 0.25, 375]} />
-        <mesh receiveShadow>
-          <boxGeometry args={[10, 0.5, length]} />
-          <meshStandardMaterial color="#0f0f15" roughness={0.8} metalness={0.2} />
-        </mesh>
-      </RigidBody>
+      {/* Physics Floor - Segmented, utilizing multiple explicit colliders to ensure a continuous and solid platform */}
+      {segments.map((seg) => (
+        <RigidBody key={seg.id} type="fixed" position={seg.position} colliders={false}>
+          <CuboidCollider args={[5, 0.25, 50]} />
+          <mesh receiveShadow>
+            <boxGeometry args={[10, 0.5, segmentLength]} />
+            <meshStandardMaterial color="#0f0f15" roughness={0.8} metalness={0.2} />
+          </mesh>
+        </RigidBody>
+      ))}
 
       {/* Visual Road Gridlines & Aesthetics */}
       {/* Central Road Mesh with Neon Glow Borders */}
