@@ -41,7 +41,7 @@ export const Player2D = () => {
       return;
     }
 
-    // 1. DYNAMIC WEIGHT SCALING (Fatness)
+    // 1. DYNAMIC WEIGHT SCALING (Fatness / Expansion)
     // In 2D, scale X and Y to look bigger/smaller flatly
     const scaleFactor = 1.0 + (weight - 50) / 100;
     group.current.scale.set(scaleFactor * 1.5, scaleFactor * 1.5, 1);
@@ -91,9 +91,6 @@ export const Player2D = () => {
     rb.current.setLinvel({ x: moveX, y: moveY, z: 0 }, true);
   });
 
-  const isWarning = weight >= 85;
-  const glowColor = isWarning ? '#ff0055' : '#00f6ff';
-
   return (
     <RigidBody
       ref={rb}
@@ -104,38 +101,52 @@ export const Player2D = () => {
       <CuboidCollider args={[0.38, 0.38, 0.2]} position={[0, 0.38, 0]} />
       <group ref={group} name="player">
         
-        {/* Procedural 2D Flat Retro Human Torso */}
-        <mesh castShadow>
-          <boxGeometry args={[0.38, 0.46, 0.15]} />
-          <meshStandardMaterial color="#1a1a24" roughness={0.4} metalness={0.8} />
+        {/* Torso - Part 1: White Shirt */}
+        <mesh position={[0, 0.08, 0]} castShadow>
+          <boxGeometry args={[0.38, 0.28, 0.15]} />
+          <meshStandardMaterial color="#ffffff" roughness={0.5} />
         </mesh>
 
-        {/* 2D Flat Human Head */}
-        <mesh position={[0, 0.38, 0]} castShadow>
+        {/* Torso - Part 2: Blue Shorts */}
+        <mesh position={[0, -0.1, 0]} castShadow>
+          <boxGeometry args={[0.39, 0.16, 0.16]} />
+          <meshStandardMaterial color="#0055ff" roughness={0.5} />
+        </mesh>
+
+        {/* Head (Skin Toned) */}
+        <mesh position={[0, 0.36, 0]} castShadow>
           <sphereGeometry args={[0.13, 16, 16]} />
           <meshStandardMaterial color="#ffdbac" roughness={0.4} />
         </mesh>
 
-        {/* Visor Eye */}
-        <mesh ref={eyeRef} position={[0, 0.4, 0.1]}>
-          <boxGeometry args={[0.22, 0.04, 0.05]} />
-          <meshStandardMaterial
-            color={glowColor}
-            emissive={glowColor}
-            emissiveIntensity={1.2}
-            roughness={0.1}
-          />
+        {/* Hair (Brown cap) */}
+        <mesh position={[0, 0.46, 0.02]} castShadow>
+          <boxGeometry args={[0.15, 0.05, 0.15]} />
+          <meshStandardMaterial color="#5c4033" />
         </mesh>
 
-        {/* Flat 2D Legs */}
-        <mesh position={[-0.1, -0.28, 0]}>
-          <boxGeometry args={[0.08, 0.22, 0.1]} />
-          <meshStandardMaterial color="#0f0f15" />
-        </mesh>
-        <mesh position={[0.1, -0.28, 0]}>
-          <boxGeometry args={[0.08, 0.22, 0.1]} />
-          <meshStandardMaterial color="#0f0f15" />
-        </mesh>
+        {/* Flat 2D Legs (Blue shorts + Skin tone calves) */}
+        <group position={[-0.1, -0.28, 0]}>
+          <mesh position={[0, 0.06, 0]} castShadow>
+            <boxGeometry args={[0.1, 0.12, 0.1]} />
+            <meshStandardMaterial color="#0055ff" />
+          </mesh>
+          <mesh position={[0, -0.06, 0]} castShadow>
+            <boxGeometry args={[0.08, 0.12, 0.08]} />
+            <meshStandardMaterial color="#ffdbac" />
+          </mesh>
+        </group>
+
+        <group position={[0.1, -0.28, 0]}>
+          <mesh position={[0, 0.06, 0]} castShadow>
+            <boxGeometry args={[0.1, 0.12, 0.1]} />
+            <meshStandardMaterial color="#0055ff" />
+          </mesh>
+          <mesh position={[0, -0.06, 0]} castShadow>
+            <boxGeometry args={[0.08, 0.12, 0.08]} />
+            <meshStandardMaterial color="#ffdbac" />
+          </mesh>
+        </group>
         
       </group>
     </RigidBody>

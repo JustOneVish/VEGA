@@ -61,13 +61,13 @@ export const Player3D = () => {
       return;
     }
 
-    // 2. DYNAMIC VISUAL SCALING (FATNESS)
+    // 2. DYNAMIC VISUAL SCALING (FATNESS / EXPANSION)
     // Scale X/Z based on current weight (base 50 is scale 1.0, range 20-100)
     const scaleFactor = 1.0 + (weight - 50) / 100;
-    // Keep Y height constant, grow width & depth to look fat/slim
+    // Keep Y height constant, grow width & depth to look fat/slim as per food picked
     group.current.scale.set(scaleFactor, 1.0, scaleFactor);
 
-    // 3. PROCEDURAL HUMAN ANIMATIONS (bobbing, limb swinging)
+    // 3. PROCEDURAL HUMAN RUNNING ANIMATIONS (bobbing, limb swinging)
     const time = state.clock.getElapsedTime();
     
     if (gameState === 'PLAYING') {
@@ -121,14 +121,12 @@ export const Player3D = () => {
     const targetX = lanes[activeLane];
     const newX = THREE.MathUtils.lerp(position.x, targetX, laneTransitionSpeed);
 
-    // Apply banking tilt when switching lanes
+    // Apply minor banking tilt when switching lanes
     const tiltTarget = (targetX - position.x) * -0.12;
     group.current.rotation.z = THREE.MathUtils.lerp(group.current.rotation.z, tiltTarget, 0.12);
 
     // 5. JUMP MECHANIC
     let jumpYVel = velocity.y;
-    // Check if player is resting on or close to the ground (resting Y is around 0.64)
-    // and vertical velocity is near zero to prevent double jumping
     const isOnGround = position.y < 0.75 && Math.abs(velocity.y) < 0.15;
     if (jump && isOnGround) {
       jumpYVel = 6.2; // Apply upward jump velocity
@@ -140,9 +138,6 @@ export const Player3D = () => {
     // Sync distance run with the store
     updateDistance(position.z);
   });
-
-  // Emissive color maps: red warning if dangerously heavy, cyan green if normal
-  const glowColor = weight >= 85 ? '#ff0055' : '#00f6ff';
 
   return (
     <RigidBody
@@ -156,64 +151,87 @@ export const Player3D = () => {
       {/* Set name="player" so CameraController can locate it */}
       <group ref={group} name="player">
         
-        {/* Head */}
+        {/* Head (Skin Toned Man) */}
         <mesh position={[0, 0.65, 0]} castShadow>
           <sphereGeometry args={[0.18, 16, 16]} />
           <meshStandardMaterial color="#ffdbac" roughness={0.4} />
         </mesh>
         
-        {/* Cyber Visor Eye (Glowing cyan/rose neon) */}
-        <mesh position={[0, 0.68, -0.12]}>
-          <boxGeometry args={[0.3, 0.06, 0.1]} />
-          <meshStandardMaterial
-            color={glowColor}
-            emissive={glowColor}
-            emissiveIntensity={1.2}
-            roughness={0.1}
-          />
+        {/* Stylized Hair (Brown cap/hair) */}
+        <mesh position={[0, 0.78, 0.02]} castShadow>
+          <boxGeometry args={[0.2, 0.06, 0.2]} />
+          <meshStandardMaterial color="#5c4033" roughness={0.6} />
+        </mesh>
+        <mesh position={[0, 0.72, 0.12]} castShadow>
+          <boxGeometry args={[0.2, 0.08, 0.04]} />
+          <meshStandardMaterial color="#5c4033" roughness={0.6} />
         </mesh>
 
-        {/* Torso (Body) */}
-        <mesh position={[0, 0.22, 0]} castShadow>
-          <boxGeometry args={[0.38, 0.54, 0.22]} />
-          <meshStandardMaterial color="#161622" roughness={0.3} metalness={0.8} />
-        </mesh>
-        
-        {/* Glowing Suit Strip */}
-        <mesh position={[0, 0.22, -0.12]}>
-          <boxGeometry args={[0.06, 0.4, 0.02]} />
-          <meshBasicMaterial color={glowColor} />
+        {/* Torso - Part 1: White Shirt (Upper Torso) */}
+        <mesh position={[0, 0.34, 0]} castShadow>
+          <boxGeometry args={[0.38, 0.3, 0.22]} />
+          <meshStandardMaterial color="#ffffff" roughness={0.5} />
         </mesh>
 
-        {/* Left Arm */}
+        {/* Torso - Part 2: Blue Shorts Waistband (Lower Torso) */}
+        <mesh position={[0, 0.11, 0]} castShadow>
+          <boxGeometry args={[0.39, 0.16, 0.23]} />
+          <meshStandardMaterial color="#0055ff" roughness={0.5} />
+        </mesh>
+
+        {/* Left Arm: White Sleeve + Skin Tone Hand */}
         <group ref={leftArmRef} position={[-0.24, 0.38, 0]}>
-          <mesh position={[0, -0.18, 0]} castShadow>
-            <boxGeometry args={[0.08, 0.36, 0.08]} />
-            <meshStandardMaterial color="#161622" roughness={0.3} metalness={0.8} />
+          {/* Upper Arm / Sleeve (White) */}
+          <mesh position={[0, -0.09, 0]} castShadow>
+            <boxGeometry args={[0.08, 0.18, 0.08]} />
+            <meshStandardMaterial color="#ffffff" roughness={0.5} />
+          </mesh>
+          {/* Forearm / Hand (Skin tone) */}
+          <mesh position={[0, -0.27, 0]} castShadow>
+            <boxGeometry args={[0.07, 0.18, 0.07]} />
+            <meshStandardMaterial color="#ffdbac" roughness={0.4} />
           </mesh>
         </group>
 
-        {/* Right Arm */}
+        {/* Right Arm: White Sleeve + Skin Tone Hand */}
         <group ref={rightArmRef} position={[0.24, 0.38, 0]}>
-          <mesh position={[0, -0.18, 0]} castShadow>
-            <boxGeometry args={[0.08, 0.36, 0.08]} />
-            <meshStandardMaterial color="#161622" roughness={0.3} metalness={0.8} />
+          {/* Upper Arm / Sleeve (White) */}
+          <mesh position={[0, -0.09, 0]} castShadow>
+            <boxGeometry args={[0.08, 0.18, 0.08]} />
+            <meshStandardMaterial color="#ffffff" roughness={0.5} />
+          </mesh>
+          {/* Forearm / Hand (Skin tone) */}
+          <mesh position={[0, -0.27, 0]} castShadow>
+            <boxGeometry args={[0.07, 0.18, 0.07]} />
+            <meshStandardMaterial color="#ffdbac" roughness={0.4} />
           </mesh>
         </group>
 
-        {/* Left Leg */}
+        {/* Left Leg: Blue Shorts Leg + Skin Tone calf */}
         <group ref={leftLegRef} position={[-0.12, -0.05, 0]}>
-          <mesh position={[0, -0.22, 0]} castShadow>
-            <boxGeometry args={[0.1, 0.44, 0.1]} />
-            <meshStandardMaterial color="#0b0b10" roughness={0.5} />
+          {/* Thigh / Shorts lower (Blue) */}
+          <mesh position={[0, -0.1, 0]} castShadow>
+            <boxGeometry args={[0.11, 0.2, 0.11]} />
+            <meshStandardMaterial color="#0055ff" roughness={0.5} />
+          </mesh>
+          {/* Shin / Foot (Skin tone) */}
+          <mesh position={[0, -0.32, 0]} castShadow>
+            <boxGeometry args={[0.09, 0.24, 0.09]} />
+            <meshStandardMaterial color="#ffdbac" roughness={0.4} />
           </mesh>
         </group>
 
-        {/* Right Leg */}
+        {/* Right Leg: Blue Shorts Leg + Skin Tone calf */}
         <group ref={rightLegRef} position={[0.12, -0.05, 0]}>
-          <mesh position={[0, -0.22, 0]} castShadow>
-            <boxGeometry args={[0.1, 0.44, 0.1]} />
-            <meshStandardMaterial color="#0b0b10" roughness={0.5} />
+          {/* Thigh / Shorts lower (Blue) */}
+          <mesh position={[0, -0.1, 0]} castShadow>
+            <boxGeometry args={[0.11, 0.2, 0.11]} />
+            <meshStandardMaterial color="#0055ff" roughness={0.5} />
+          </mesh>
+          {/* Shin / Foot (Skin tone) */}
+          <mesh position={[0, -0.32, 0]} castShadow>
+            <boxGeometry args={[0.09, 0.24, 0.09]} />
+            <meshStandardMaterial color="#ffdbac" roughness={0.4} />
           </mesh>
         </group>
         
