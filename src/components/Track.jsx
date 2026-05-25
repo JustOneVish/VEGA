@@ -1,5 +1,5 @@
 import React from 'react';
-import { RigidBody } from '@react-three/rapier';
+import { RigidBody, CuboidCollider } from '@react-three/rapier';
 import { Text } from '@react-three/drei';
 
 export const Track = () => {
@@ -24,8 +24,9 @@ export const Track = () => {
 
   return (
     <group>
-      {/* Physics Floor - Static */}
-      <RigidBody type="fixed" position={[0, -0.25, -360]} colliders="cuboid">
+      {/* Physics Floor - Static, utilizing an explicit collider to prevent falling through floor */}
+      <RigidBody type="fixed" position={[0, -0.25, -360]} colliders={false}>
+        <CuboidCollider args={[5, 0.25, 375]} />
         <mesh receiveShadow>
           <boxGeometry args={[10, 0.5, length]} />
           <meshStandardMaterial color="#0f0f15" roughness={0.8} metalness={0.2} />
@@ -89,7 +90,7 @@ export const Track = () => {
           color="#00ff66"
           anchorX="center"
           anchorY="middle"
-          rotation={[0, Math.PI, 0]} // Face the camera at start
+          rotation={[0, 0, 0]} // Face the camera perfectly at start (fixed from flipped view)
         >
           START
         </Text>

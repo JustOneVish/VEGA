@@ -20,6 +20,14 @@ export const Player2D = () => {
     }
   }, []);
 
+  // Reset physics position when the game starts or resets
+  useEffect(() => {
+    if (gameState === 'PLAYING' && rb.current) {
+      rb.current.setTranslation({ x: 0, y: 0.4, z: 0 }, true);
+      rb.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
+    }
+  }, [gameState]);
+
   useFrame((state, delta) => {
     if (!rb.current || !group.current) return;
 
@@ -66,7 +74,7 @@ export const Player2D = () => {
     }
 
     // Jump
-    const isOnGround = position.y < 0.1;
+    const isOnGround = position.y < 0.45 && Math.abs(velocity.y) < 0.15;
     if (jump && isOnGround) {
       moveY = 6.2;
     }

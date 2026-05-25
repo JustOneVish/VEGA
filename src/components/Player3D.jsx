@@ -34,6 +34,15 @@ export const Player3D = () => {
     }
   }, []);
 
+  // Reset physics position and lane state when the game starts or resets
+  useEffect(() => {
+    if (gameState === 'PLAYING' && rb.current) {
+      rb.current.setTranslation({ x: 0, y: 0.4, z: 0 }, true);
+      rb.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      setActiveLane(1);
+    }
+  }, [gameState]);
+
   useFrame((state, delta) => {
     if (!rb.current || !group.current) return;
 
@@ -105,10 +114,11 @@ export const Player3D = () => {
 
     // 4. JUMP MECHANIC
     let jumpYVel = velocity.y;
-    // Check if player is on the ground
-    const isOnGround = position.y < 0.1;
+    // Check if player is resting on or close to the ground (resting Y is around 0.32)
+    // and vertical velocity is near zero to prevent double jumping
+    const isOnGround = position.y < 0.45 && Math.abs(velocity.y) < 0.15;
     if (jump && isOnGround) {
-      jumpYVel = 5.8; // Apply upward jump velocity
+      jumpYVel = 6.2; // Apply upward jump velocity
     }
 
     // Apply constant forward speed in Z (running from 0 towards negative Z)
